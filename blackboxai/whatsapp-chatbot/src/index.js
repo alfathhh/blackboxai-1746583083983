@@ -1,6 +1,6 @@
 require('dotenv').config();
 const whatsapp = require('./services/whatsapp');
-const messageHandler = require('./handlers/messageHandler');
+const messageHandler = require('./handlers/messageHandler').handleMessage;
 const logger = require('./utils/logger');
 const config = require('./config');
 
@@ -24,7 +24,7 @@ async function startBot() {
         });
         
         // Initialize WhatsApp service with message handler
-        await whatsapp.initialize(messageHandler.handleMessage.bind(messageHandler));
+        await whatsapp.initialize(messageHandler);
         
         // Handle process termination
         process.on('SIGTERM', async () => {
