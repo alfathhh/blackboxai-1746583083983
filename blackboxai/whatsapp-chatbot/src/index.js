@@ -5,30 +5,42 @@ const logger = require('./utils/logger');
 const config = require('./config');
 
 // Validate required environment variables
-const requiredEnvVars = ['CS_CONTACT_ID', 'SPREADSHEET_ID'];
+const requiredEnvVars = ['SPREADSHEET_ID'];
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
-    logger.error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
+    logger.error({
+        type: 'startup_error',
+        error: `Missing required environment variables: ${missingEnvVars.join(', ')}`
+    });
     process.exit(1);
 }
 
 async function startBot() {
     try {
-        logger.info('Starting WhatsApp bot...');
+        logger.info({
+            type: 'startup',
+            message: 'Starting WhatsApp bot...'
+        });
         
         // Initialize WhatsApp service with message handler
         await whatsapp.initialize(messageHandler.handleMessage.bind(messageHandler));
         
         // Handle process termination
         process.on('SIGTERM', async () => {
-            logger.info('SIGTERM received. Cleaning up...');
+            logger.info({
+                type: 'shutdown',
+                message: 'SIGTERM received. Cleaning up...'
+            });
             // Add any cleanup logic here
             process.exit(0);
         });
 
         process.on('SIGINT', async () => {
-            logger.info('SIGINT received. Cleaning up...');
+            logger.info({
+                type: 'shutdown',
+                message: 'SIGINT received. Cleaning up...'
+            });
             // Add any cleanup logic here
             process.exit(0);
         });
