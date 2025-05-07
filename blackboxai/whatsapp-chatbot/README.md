@@ -9,7 +9,7 @@ Sebuah chatbot WhatsApp yang dibuat menggunakan Node.js dan Baileys, dengan fitu
 - Penyimpanan sesi otomatis
 - Sistem menu interaktif
 - Integrasi dengan CS:
-  - Forwarding pesan ke CS
+  - CS menggunakan WhatsApp yang sama dengan bot
   - Timeout handling untuk respons CS
   - Status tracking untuk chat CS
 - Logging lengkap:
@@ -25,7 +25,6 @@ Sebuah chatbot WhatsApp yang dibuat menggunakan Node.js dan Baileys, dengan fitu
 - Koneksi internet yang stabil
 - Smartphone dengan WhatsApp terinstall
 - Akun Google dan akses ke Google Cloud Console
-- Nomor WhatsApp untuk CS
 
 ## Instalasi
 
@@ -51,7 +50,6 @@ cp .env.example .env
 
 5. Update konfigurasi di file .env dengan nilai yang sesuai:
 ```
-CS_CONTACT_ID=62XXXXXXXXXX@c.us    # Nomor WhatsApp CS
 SPREADSHEET_ID=your_spreadsheet_id  # ID Google Spreadsheet
 SHEET_NAME=Chat Logs               # Nama sheet untuk logging
 CREDENTIALS_PATH=./credentials.json # Path ke credentials Google
@@ -119,12 +117,10 @@ npm start
    - Mencatat semua interaksi ke Google Sheets
 
 2. CS (Customer Service):
-   - Menerima forward pesan dari pengguna
-   - Membalas menggunakan format khusus:
-     ```
-     User: [user_id]; Reply: [pesan balasan]
-     ```
-   - Mendapat notifikasi saat ada chat baru
+   - Menggunakan WhatsApp yang sama dengan bot
+   - Menerima notifikasi saat ada chat baru
+   - Langsung membalas ke pengguna
+   - Tidak perlu format khusus untuk membalas
 
 3. Pengguna:
    - Menerima menu otomatis
@@ -154,8 +150,7 @@ Bot mencatat setiap interaksi dengan format:
 - Periksa permission service account
 
 ### Masalah CS
-- Pastikan format balasan CS sesuai
-- Verifikasi CS_CONTACT_ID di .env benar
+- Pastikan CS menggunakan WhatsApp yang sama dengan bot
 - Cek timeout settings jika perlu
 
 ### Error Umum
@@ -169,7 +164,6 @@ Bot mencatat setiap interaksi dengan format:
 - Jangan share file .env
 - Jangan share QR Code WhatsApp
 - Batasi akses ke Google Spreadsheet
-- Jaga kerahasiaan CS_CONTACT_ID
 
 ## Pengembangan
 
