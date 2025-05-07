@@ -37,12 +37,8 @@ class MessageHandler {
                     break;
 
                 case config.STATES.WAITING_CS:
-                    // Messages in waiting state are forwarded to CS
-                    await whatsapp.forwardToCS(remoteJid, messageText);
-                    return;
-
                 case config.STATES.CHATTING_CS:
-                    // Messages in chatting state are forwarded to CS
+                    // Messages in waiting or chatting state are forwarded to CS
                     await whatsapp.forwardToCS(remoteJid, messageText);
                     return;
 
