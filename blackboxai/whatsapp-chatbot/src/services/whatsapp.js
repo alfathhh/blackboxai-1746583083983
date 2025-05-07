@@ -90,18 +90,27 @@ class WhatsAppService {
                               message?.message?.extendedTextMessage?.text || '';
             const messageType = Object.keys(message.message)[0];
 
-            // Ignore messages from self unless they're from CS
-            if (fromMe && remoteJid !== config.CS_CONTACT_ID) return;
-
-            // Handle CS messages differently
-            if (remoteJid === config.CS_CONTACT_ID) {
-                await this.handleCSMessage(messageText);
+            // Jika pesan dari bot sendiri (CS), cek apakah pesan "Terima kasih sudah menghubungi kami"
+            if (fromMe) {
+                const targetUser = this.findUserInCSChat(remoteJid);
+                if (targetUser) {
+                    logger.csInteraction('cs_to_user', targetUser, 'CS', messageText);
+                    if (messageText.toLowerCase().includes('terima kasih sudah menghubungi kami')) {
+                        // Kembalikan status user ke main menu
+                        this.setUserState(targetUser, config.STATES.MAIN_MENU);
+                        // Kirim pesan konfirmasi ke user
+                        await this.sock.sendMessage(targetUser, { text: 'Sesi chat dengan CS telah selesai. Anda kembali ke menu utama.' });
+                    }
+                }
                 return;
             }
 
+
             // Handle user messages
-            if (this.userStates.get(remoteJid) === config.STATES.CHATTING_CS) {
-                await this.forwardToCS(remoteJid, messageText);
+            const currentState = this.userStates.get(remoteJid);
+            if (currentState === config.STATES.CHATTING_CS || currentState === config.STATES.WAITING_CS) {
+                // Pesan langsung diteruskan karena CS menggunakan WhatsApp yang sama
+                logger.csInteraction('user_to_cs', remoteJid, 'CS', messageText);
             } else {
                 await messageHandler(this.sock, message);
             }
@@ -114,59 +123,24 @@ class WhatsAppService {
         }
     }
 
-    async handleCSMessage(messageText) {
-        try {
-            // Expected format: "User: <user_id>; Reply: <message>"
-            const match = messageText.match(/User: (.+?); Reply: (.+)/);
-            if (!match) {
-                await this.sock.sendMessage(config.CS_CONTACT_ID, {
-                    text: 'Format pesan salah. Gunakan format: "User: <user_id>; Reply: <pesan>"'
-                });
-                return;
+    // Mencari user yang sedang dalam sesi chat dengan CS
+    findUserInCSChat(userId) {
+        for (const [user, state] of this.userStates.entries()) {
+            if ((state === config.STATES.CHATTING_CS || state === config.STATES.WAITING_CS) && 
+                this.csChats.has(user)) {
+                return user;
             }
-
-            const [, userId, reply] = match;
-            
-            // Send reply to user
-            await this.sock.sendMessage(userId, { text: reply });
-            
-            logger.csInteraction('cs_to_user', userId, config.CS_CONTACT_ID, reply);
-
-        } catch (error) {
-            logger.errorWithContext(error, {
-                service: 'WhatsAppService',
-                method: 'handleCSMessage'
-            });
         }
-    }
-
-    async forwardToCS(userId, message) {
-        try {
-            const formattedMessage = `[Pesan dari ${userId}]: ${message}`;
-            await this.sock.sendMessage(config.CS_CONTACT_ID, { text: formattedMessage });
-            
-            logger.csInteraction('user_to_cs', userId, config.CS_CONTACT_ID, message);
-
-        } catch (error) {
-            logger.errorWithContext(error, {
-                service: 'WhatsAppService',
-                method: 'forwardToCS'
-            });
-        }
+        return null;
     }
 
     async startCSChat(userId) {
         try {
-            // Set user state to waiting for CS
-            this.userStates.set(userId, config.STATES.WAITING_CS);
+            // Set user state to chatting with CS
+            this.userStates.set(userId, config.STATES.CHATTING_CS);
             
             // Notify user
             await this.sock.sendMessage(userId, { text: config.MESSAGES.WAITING_CS });
-            
-            // Notify CS
-            await this.sock.sendMessage(config.CS_CONTACT_ID, {
-                text: `⚡ Ada permintaan chat baru dari ${userId}`
-            });
 
             // Set timeout for CS response
             const timeoutId = setTimeout(async () => {
@@ -181,7 +155,7 @@ class WhatsAppService {
                 timeoutId
             });
 
-            logger.csInteraction('chat_request', userId, config.CS_CONTACT_ID, 'Chat request initiated');
+            logger.csInteraction('chat_request', userId, 'CS', 'Chat request initiated');
 
         } catch (error) {
             logger.errorWithContext(error, {
@@ -206,7 +180,7 @@ class WhatsAppService {
                 this.csChats.delete(userId);
             }
 
-            logger.csInteraction('cs_timeout', userId, config.CS_CONTACT_ID, 'CS response timeout');
+            logger.csInteraction('cs_timeout', userId, 'CS', 'CS response timeout');
 
         } catch (error) {
             logger.errorWithContext(error, {
